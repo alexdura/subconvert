@@ -2,7 +2,8 @@ module SrtParser where
 
 import qualified SubContainer as SC
 import Text.ParserCombinators.Parsec
-import Text.Parsec.Prim (modifyState)
+--import Text.Parsec.Prim (modifyState)
+import Text.Parsec.Char
 import Data.Char
 
 makeDefaultSubtitle :: Int -> Int -> String -> SC.Subtitle
@@ -38,55 +39,77 @@ data SrtState = SrtState {
   color :: String
   } deriving (Eq, Show)
 
+b s = SrtState True (italic s) (underline s) (color s)
+i s = SrtState (bold s) True (underline s) (color s)
+u s = SrtState (bold s) (italic s) True (color s)
+c color s = SrtState (bold s) (italic s) (underline s) color
+
+data TextTree = TextTag TextTree (SrtState -> SrtState)
+              | LeafText String
+              | TextNode [TextTree]
+
 defaultState = SrtState False False False ""
 
-boldOn = do {
-  string "<b>" <|> string "{b}";
-  modifyState (\s -> SrtState True (italic s) (underline s) (color s));
-  }
+boldOn = try (string "<b>") <|> string "{b}"
+boldOff = try (string "</b>") <|> string "{/b}"
 
-boldOff = do {
-  string "</b>" <|> string "{/b}";
-  modifyState (\s -> SrtState False (italic s) (underline s) (color s));
-  }
+pbold = (\t -> TextTag t b) <$> (between boldOn boldOff parseText)
 
-italicOn = do {
-  string "<i>" <|> string "{i}";
-  modifyState (\s -> SrtState (bold s) True (underline s) (color s));
-  }
+italicOn = try (string "<i>") <|> string "{i}"
+italicOff = try (string "</i>") <|> string "{/i}"
 
-italicOff = do {
-  string "</i>" <|> string "{/i}";
-  modifyState (\s -> SrtState (bold s) False (underline s) (color s));
-  }
+pitalic = (\t -> TextTag t i) <$> (between italicOn italicOff parseText)
 
-underlineOn = do {
-  string "<u>" <|> string "{u}";
-  modifyState (\s -> SrtState (bold s) (italic s) True (color s));
-  }
+underlineOn = try (string "<u>") <|> string "{u}"
+underlineOff = try (string "</u>") <|> string "{/u}"
 
-underlineOff = string "</u>" <|> string "{/u}"
+punderline = (\t -> TextTag t u) <$> (between underlineOn underlineOff parseText)
 
-parseColorOn = do {
+colorOn = do {
   string "<font";
   spaces;
   string "color=\"";
-  color <- noneOf "\"";
+  color <- manyTill anyChar (try (char '"'));
   string "\">";
-  modifyState (\s -> SrtState (bold s) (italic s) (underline s) color);
+  return color;
   }
 
-parseColorOff = do {
-  string "</color>";
-  modifyState (\s -> SrtState (bold s) (italic s) (underline s) "");
+colorOff = string "</color>"
+pcolor = do {
+  cc <- colorOn;
+  t <- parseText;
+  colorOff;
+  return (TextTag t (c cc));
   }
 
-parseText = do {
-
+emptyLine = do {
+  endOfLine;
+  spaces;
+  endOfLine;
+  return "";
   }
 
+plain = do {
+  t <- manyTill anyChar (try emptyLine <|>
+                         try boldOn <|>
+                         try italicOn <|>
+                         try colorOn <|>
+                         try underlineOn <|>
+                         try colorOn);
+  return (LeafText t);
+  }
+
+formatOrPlain = (try pbold) <|>
+                (try pitalic) <|>
+                (try punderline) <|>
+                (try pcolor) <|>
+                plain
+
+parseText = (\t -> TextNode t) <$> many1 formatOrPlain
 
 test1 = runParser parseTimeStamp defaultState "" "10:11:39,100"
-test2 = runParser boldOn defaultState "" "b{b}"
-test3 = runParser boldOn defaultState "" "{b}"
-test4 = runParser boldOff defaultState "" "{b}"
+-- test2 = runParser boldOn defaultState "" "b{b}"
+-- test3 = runParser boldOn defaultState "" "{b}"
+-- test4 = runParser boldOff defaultState "" "{b}"
+test5 = runParser parseText () ""
+        "<b> HEllo <i> JKJKJK </i> xxx </b>"

@@ -3,6 +3,7 @@ module SrtParser where
 import qualified SubContainer as SC
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Char
+import Text.Parsec (Parsec)
 import Data.Char
 import Data.List
 
@@ -47,13 +48,6 @@ c color s = SrtState (bold s) (italic s) (underline s) color
 data TextTree = TextTag TextTree (SrtState -> SrtState)
               | LeafText String
               | TextNode [TextTree]
-
-dump :: TextTree -> String
-dump = dumpi 0
-dumpi :: Int -> TextTree -> String
-dumpi n (LeafText s) = replicate n ' ' ++  s ++ "\n"
-dumpi n (TextTag t _) = replicate n ' ' ++ "t:\n" ++ dumpi (n + 1) t
-dumpi n (TextNode ns) = foldl' (\l -> \r -> l ++ (dumpi n r)) "" ns
 
 defaultState = SrtState False False False ""
 
@@ -103,30 +97,31 @@ formatOrPlain = (try pbold) <|>
                 (try punderline) <|>
                 (try pcolor) <|>
                 plain
-
+parseText :: Parsec String () TextTree
 parseText = (\t -> TextNode t) <$> many formatOrPlain
 
-dumpResult (Right t) = dump t
-dumpResult (Left e) = show e
+dummy = runParser parseText () "" "xxx"
+dummy1 = runParser emptyLine () "" "\n\n"
+dummy2 = runParser parseTimeStamp defaultState "" "10:11:39,100"
+-- dumpResult (Right t) = dump t
+-- dumpResult (Left e) = show e
 
-test1 = runParser parseTimeStamp defaultState "" "10:11:39,100"
-test2 = dumpResult $ runParser plain () "" "abcd abcsd <b>x</b> ahs\n\n"
-test20 = dumpResult $ runParser plain () "" "abcd abcsd"
-test21 = dumpResult $ runParser plain () "" "abcd abcsd  ahs\n\n"
-test3 = runParser emptyLine () "" "\n\n"
-test4 = dumpResult $ runParser pbold () "" "<b><i>abcd</i><b></b></b>\n\n"
-test40 = dumpResult $ runParser pcolor () "" "<font color=\"ABC\">xxx </font>"
-test6 = dumpResult $ runParser parseText () ""
-        "Hello <b>my name is</b>\
-        \What is yours? <font color=\"XXX\">\
-        \My color is </font>\n\
-        \\n"
+-- test1 = runParser parseTimeStamp defaultState "" "10:11:39,100"
+-- test2 = dumpResult $ runParser plain () "" "abcd abcsd <b>x</b> ahs\n\n"
+-- test20 = dumpResult $ runParser plain () "" "abcd abcsd"
+-- test21 = dumpResult $ runParser plain () "" "abcd abcsd  ahs\n\n"
+-- test3 = runParser emptyLine () "" "\n\n"
+-- test4 = dumpResult $ runParser pbold () "" "<b><i>abcd</i><b></b></b>\n\n"
+-- test40 = dumpResult $ runParser pcolor () "" "<font color=\"ABC\">xxx </font>"
 
--- test2 = runParser boldOn defaultState "" "b{b}"
--- test3 = runParser boldOn defaultState "" "{b}"
--- test4 = runParser boldOff defaultState "" "{b}"
-test5 = let r = runParser parseText () ""
-                "xxx"
-        in case r of
-            Right t -> dump t
-            Left e -> "Error"
+-- test7 = dumpResult $ runParser parseText () ""
+--         "Hello <b> this is a <i> nested <u> tag </u>. But it </i> should </b> be allright\n\n"
+
+-- -- test2 = runParser boldOn defaultState "" "b{b}"
+-- -- test3 = runParser boldOn defaultState "" "{b}"
+-- -- test4 = runParser boldOff defaultState "" "{b}"
+-- test5 = let r = runParser parseText () ""
+--                 "xxx"
+--         in case r of
+--             Right t -> dump t
+--             Left e -> "Error"

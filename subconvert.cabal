@@ -41,6 +41,7 @@ build-type:          Simple
 -- Extra files to be distributed with the package, such as examples or a
 -- README.
 -- extra-source-files:
+--                LICENSE
 
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
@@ -58,9 +59,27 @@ executable subconvert
 
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.8 && <4.9
+                     , parsec
 
   -- Directories containing source files.
   hs-source-dirs:      src
 
   -- Base language which the package is written in.
   default-language:    Haskell2010
+
+
+test-suite test
+
+ Type: exitcode-stdio-1.0
+
+ hs-source-dirs: testsuite/tests
+               , src
+
+ main-is: Spec.hs
+
+ build-depends: HUnit >= 1.5
+              , base >=4.8 && <4.9
+              , hspec
+              , parsec
+
+ default-language: Haskell2010

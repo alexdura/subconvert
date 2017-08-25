@@ -32,39 +32,44 @@ parseTimeStamp = do {
           (c2i ms2) * 100 + (c2i ms1) * 10 + (c2i ms1));
   }
 
+data Tag = Bold
+         | Italic
+         | Underline
+         | Color String
+         deriving (Eq, Show)
 
-data SrtState = SrtState {
-  bold :: Bool,
-  italic :: Bool,
-  underline :: Bool,
-  color :: String
-  } deriving (Eq, Show)
-
-b s = SrtState True (italic s) (underline s) (color s)
-i s = SrtState (bold s) True (underline s) (color s)
-u s = SrtState (bold s) (italic s) True (color s)
-c color s = SrtState (bold s) (italic s) (underline s) color
-
-data TextTree = TextTag TextTree (SrtState -> SrtState)
+data TextTree = TextTag TextTree Tag
               | LeafText String
               | TextNode [TextTree]
+              deriving (Eq, Show)
 
-defaultState = SrtState False False False ""
+linearize :: TextTree -> String
+
+linearize (TextTag tree tag) =
+  case tag of
+   Bold -> "<b>" ++ (linearize tree) ++ "</b>"
+   Italic -> "<i>" ++ (linearize tree) ++ "</i>"
+   Underline -> "<u>" ++ (linearize tree) ++ "</u>"
+   Color c -> "<font color=\"" ++ c ++ ">" ++ (linearize tree) ++ "</font>"
+
+linearize (LeafText s) = s
+
+linearize (TextNode ts) = foldl' (\l -> \r -> l ++ (linearize r)) "" ts
 
 boldOn = string "<b>" <|> string "{b}"
 boldOff = string "</b>" <|> string "{/b}"
 
-pbold = (\t -> TextTag t b) <$> (between (try boldOn) (try boldOff) parseText)
+pbold = (\t -> TextTag t Bold) <$> (between (try boldOn) (try boldOff) parseText)
 
 italicOn = string "<i>" <|> string "{i}"
 italicOff = string "</i>" <|> string "{/i}"
 
-pitalic = (\t -> TextTag t i) <$> (between (try italicOn) (try italicOff) parseText)
+pitalic = (\t -> TextTag t Italic) <$> (between (try italicOn) (try italicOff) parseText)
 
 underlineOn = string "<u>" <|> string "{u}"
 underlineOff = string "</u>" <|> string "{/u}"
 
-punderline = (\t -> TextTag t u) <$>
+punderline = (\t -> TextTag t Underline) <$>
              (between (try underlineOn) (try underlineOff) parseText)
 
 colorOn = do {
@@ -81,7 +86,7 @@ pcolor = do {
   cc <- try colorOn;
   t <- parseText;
   colorOff;
-  return (TextTag t (c cc));
+  return (TextTag t (Color cc));
   }
 
 emptyLine = do {
@@ -90,21 +95,56 @@ emptyLine = do {
   return "";
   }
 
-plain = (\t -> LeafText t) <$> many1 (noneOf "<>")
+plainChar = do {
+  c <- lookAhead anyChar;
+  case c of
+   '<' -> unexpected "<"
+   '\n' -> do {
+     anyChar;
+     notFollowedBy (char '\n');
+     return c;
+     }
+   otherwise -> anyChar;
+  }
+
+plain = (\t -> LeafText t) <$> (many1 (try plainChar))
 
 formatOrPlain = (try pbold) <|>
                 (try pitalic) <|>
                 (try punderline) <|>
                 (try pcolor) <|>
                 plain
+
 parseText :: Parsec String () TextTree
 parseText = (\t -> TextNode t) <$> many formatOrPlain
 
-dummy = runParser parseText () "" "xxx"
 dummy1 = runParser emptyLine () "" "\n\n"
-dummy2 = runParser parseTimeStamp defaultState "" "10:11:39,100"
--- dumpResult (Right t) = dump t
--- dumpResult (Left e) = show e
+dummy2 = runParser parseTimeStamp () "" "10:11:39,100"
+
+parseSubtitle = do {
+  -- ignore the sequential index
+  skipMany1 digit;
+  endOfLine;
+  startTime <- parseTimeStamp;
+  spaces;
+  string "-->";
+  spaces;
+  endTime <- parseTimeStamp;
+  endOfLine;
+  text <- parseText;
+  return (makeDefaultSubtitle startTime endTime (linearize text));
+  }
+
+parseSrtFile = do {
+  subs <- sepEndBy parseSubtitle (try emptyLine);
+  return (SC.SubContainer {
+             SC.metadata = SC.Metadata "",
+             SC.styles = [],
+             SC.sub = subs
+                   })
+
+  }
+
 
 -- test1 = runParser parseTimeStamp defaultState "" "10:11:39,100"
 -- test2 = dumpResult $ runParser plain () "" "abcd abcsd <b>x</b> ahs\n\n"

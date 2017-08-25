@@ -2,7 +2,7 @@ module SubContainer where
 
 data Metadata = Metadata {
   desc :: String
-  } deriving Show
+  } deriving (Show, Eq)
 
 data FontStyle = FontStyle {
   face :: String,
@@ -19,7 +19,7 @@ data FontStyle = FontStyle {
   shadow_color :: String,
   shadow_level :: String,
   wrap :: String
-  } deriving Show
+  } deriving (Show, Eq)
 
 data Position = Position {
   alignment :: String,
@@ -29,32 +29,32 @@ data Position = Position {
   rotate_x :: String,
   rotate_y :: String,
   rotate_z :: String
-  } deriving Show
+  } deriving (Show, Eq)
 
 data Style = Style {
   name :: String,
   fontStyle :: FontStyle,
   position :: Position
-  } deriving Show
+  } deriving (Show, Eq)
 
 data TextChunk = TextChunk {
   format :: Maybe FontStyle,
   text :: String
-  } deriving Show
+  } deriving (Show, Eq)
 
 data Text = Text {
-  style :: Maybe Style,
+  style_name :: Maybe String,
   chunks :: TextChunk
-  } deriving Show
+  } deriving (Show, Eq)
 
 data Subtitle = Subtitle {
   start :: Int,
   stop :: Int,
   subtext :: [Text]
-  } deriving Show
+  } deriving (Show, Eq)
 
 data SubContainer = SubContainer {
   metadata :: Metadata,
   styles :: [Style],
   sub :: [Subtitle]
-} deriving Show
+} deriving (Show, Eq)

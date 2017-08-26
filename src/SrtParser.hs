@@ -6,13 +6,7 @@ import Text.Parsec.Char
 import Text.Parsec (Parsec)
 import Data.Char
 import Data.List
-
-makeDefaultSubtitle :: Int -> Int -> String -> SC.Subtitle
-makeDefaultSubtitle start stop text =
-  SC.Subtitle start stop [SC.Text Nothing (SC.TextChunk Nothing text)]
-
-c2i :: Char -> Int
-c2i c = ord c - ord '0'
+import Common
 
 parseTimeStamp = do {
   h1 <- digit;

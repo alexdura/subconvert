@@ -1,4 +1,7 @@
 import Test.Hspec
 import qualified SrtParserSpec
-
-main = hspec SrtParserSpec.tests
+import qualified SubParserSpec
+main = hspec $ do {
+  SrtParserSpec.tests;
+  SubParserSpec.tests;
+  }

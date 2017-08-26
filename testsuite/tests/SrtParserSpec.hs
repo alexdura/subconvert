@@ -5,6 +5,10 @@ import SrtParser
 import SubContainer
 import Data.List
 import Text.ParserCombinators.Parsec
+import Text.Parsec.Pos
+import Text.Parsec.Error
+
+import Common
 
 dump :: TextTree -> String
 dump = dumpi 0
@@ -16,8 +20,8 @@ dumpi n (TextNode ns) = foldl' (\l -> \r -> l ++ (dumpi n r)) "" ns
 dumpResult (Right t) = dump t
 dumpResult (Left e) = show e
 
-isLeft (Left _) = True
-isLeft _ = False
+numSubtitles (Left _) = 0
+numSubtitles (Right s) = (length . sub) s
 
 tests =
   describe "SrtParse" $ do
@@ -90,7 +94,7 @@ tests =
                                                           Left _ -> True
                                                           otherwise -> False)
 
-    it "Parses an entire file" $ do
+    it "Parses multiple subtitles" $ do
       runParser parseSrtFile () ""
         "128\n01:01:01,100 --> 01:02:02,000\nXXXX\n\n129\n01:01:01,100 --> 01:02:02,000\nXXXX\n\n" `shouldBe`
         Right (
@@ -111,3 +115,32 @@ tests =
                  subtext = [Text {style_name = Nothing,
                                   chunks = TextChunk {format = Nothing, text = "XXXX"}
                                  }]}]})
+
+    it "Parses multiple subtitles" $ do
+      runParser parseSrtFile () ""
+        "128\n01:01:01,100 --> 01:02:02,000\nXXXX\n\n129\n01:01:01,100 --> 01:02:02,000\nXXXX" `shouldBe`
+        Right (
+          SubContainer {
+             metadata = Metadata {desc = ""},
+             styles = [],
+             sub = [
+               Subtitle {
+                  start = 3660100,
+                  stop = 3720000,
+                  subtext = [Text {
+                                style_name = Nothing,
+                                chunks = TextChunk {format = Nothing, text = "XXXX"}}
+                            ]},
+               Subtitle {
+                 start = 3660100,
+                 stop = 3720000,
+                 subtext = [Text {style_name = Nothing,
+                                  chunks = TextChunk {format = Nothing, text = "XXXX"}
+                                 }]}]})
+
+    it "Reads a file and parses it" $
+       do {
+         s <- readFile "./samples/the.godfather.10.entries.srt";
+         return $ numSubtitles (runParser parseSrtFile () "" s);
+       }
+       `shouldReturn` 10

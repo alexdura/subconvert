@@ -48,8 +48,8 @@ data Text = Text {
   } deriving (Show, Eq)
 
 data Subtitle = Subtitle {
-  start :: Int,
-  stop :: Int,
+  start :: Int, -- time in ms
+  stop :: Int, -- time in ms
   subtext :: [Text]
   } deriving (Show, Eq)
 

@@ -38,7 +38,7 @@ tests =
     it "Parses a plain char 2" $ do
       runParser plainChar () "" "\nabc" `shouldBe` (Right '\n')
 
-    it "Parses a plaine char 3" $ do
+    it "Parses a plain char 3" $ do
       runParser plainChar () "" "\n\nabc" `shouldSatisfy` isLeft
 
     it "Parses plain 1" $ do
@@ -95,7 +95,7 @@ tests =
                                                           otherwise -> False)
 
     it "Parses multiple subtitles" $ do
-      runParser parseSrtFile () ""
+      runParser parseFile () ""
         "128\n01:01:01,100 --> 01:02:02,000\nXXXX\n\n129\n01:01:01,100 --> 01:02:02,000\nXXXX\n\n" `shouldBe`
         Right (
           SubContainer {
@@ -117,7 +117,7 @@ tests =
                                  }]}]})
 
     it "Parses multiple subtitles" $ do
-      runParser parseSrtFile () ""
+      runParser parseFile () ""
         "128\n01:01:01,100 --> 01:02:02,000\nXXXX\n\n129\n01:01:01,100 --> 01:02:02,000\nXXXX" `shouldBe`
         Right (
           SubContainer {
@@ -141,6 +141,6 @@ tests =
     it "Reads a file and parses it" $
        do {
          s <- readFile "./samples/the.godfather.10.entries.srt";
-         return $ numSubtitles (runParser parseSrtFile () "" s);
+         return $ numSubtitles (runParser parseFile () "" s);
        }
        `shouldReturn` 10

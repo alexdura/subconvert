@@ -129,7 +129,7 @@ parseSubtitle = do {
   return (makeDefaultSubtitle startTime endTime (linearize text));
   }
 
-parseSrtFile = do {
+parseFile = do {
   subs <- sepEndBy parseSubtitle (try emptyLine);
   return (SC.SubContainer {
              SC.metadata = SC.Metadata "",
@@ -138,24 +138,3 @@ parseSrtFile = do {
                    })
 
   }
-
-
--- test1 = runParser parseTimeStamp defaultState "" "10:11:39,100"
--- test2 = dumpResult $ runParser plain () "" "abcd abcsd <b>x</b> ahs\n\n"
--- test20 = dumpResult $ runParser plain () "" "abcd abcsd"
--- test21 = dumpResult $ runParser plain () "" "abcd abcsd  ahs\n\n"
--- test3 = runParser emptyLine () "" "\n\n"
--- test4 = dumpResult $ runParser pbold () "" "<b><i>abcd</i><b></b></b>\n\n"
--- test40 = dumpResult $ runParser pcolor () "" "<font color=\"ABC\">xxx </font>"
-
--- test7 = dumpResult $ runParser parseText () ""
---         "Hello <b> this is a <i> nested <u> tag </u>. But it </i> should </b> be allright\n\n"
-
--- -- test2 = runParser boldOn defaultState "" "b{b}"
--- -- test3 = runParser boldOn defaultState "" "{b}"
--- -- test4 = runParser boldOff defaultState "" "{b}"
--- test5 = let r = runParser parseText () ""
---                 "xxx"
---         in case r of
---             Right t -> dump t
---             Left e -> "Error"

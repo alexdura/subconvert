@@ -7,6 +7,10 @@ import System.Console.GetOpt
 import System.Environment
 import System.Exit
 import System.IO
+import qualified SrtParser as SrtP
+import qualified SubParser as SubP
+import qualified SrtPrinter as SrtW
+import Text.Parsec (runParser)
 
 data OptionFlags = FPS String
                  | Output String
@@ -33,14 +37,9 @@ data InputArgs = InputArgs {
   output :: String,
   input :: String,
   version :: Bool
-  }
+  } deriving(Show)
 
 hFlag :: OptionFlags -> InputArgs -> IO(InputArgs)
--- hFlag (FPS s) args = do {
---   f <- readIO s;
---   return (args {fps = f});
---   }
-
 hFlag (FPS s) args = (readIO s) >>= (\f -> return (args {fps = f}))
 hFlag (Output s) args = return (args {output = s})
 hFlag Version args = return (args {version = True})
@@ -55,14 +54,19 @@ defaultArgs = InputArgs {
 collectArgs :: ([OptionFlags], [String]) -> IO(InputArgs)
 collectArgs (flags, positional) = do {
   args <- foldM (flip  hFlag) defaultArgs flags;
-  putStrLn ("FPS: " ++ ((show . fps) args));
-  putStrLn ("Input: " ++ ((show . input) args));
-  putStrLn ("Output: " ++ ((show . output) args));
-  putStrLn ("Version: " ++ ((show . version) args));
   case (length positional) of
    0 -> ioError $ userError "No input file specified"
    1 -> return (args {input = head positional})
    otherwise -> ioError $ userError "Too many input files"
+  }
+
+execute :: InputArgs -> IO ()
+execute s = do {
+  input <- readFile $ input s;
+  case runParser (SubP.parseFile 1) () "" input of
+   Left err -> ioError $ userError "Parsing error"
+   Right tsubs ->
+     writeFile (output s) (SrtW.subContainerToStr tsubs);
   }
 
 main :: IO ()
@@ -70,6 +74,7 @@ main = do {
   putStrLn "The subtitle converter";
   argv <- getArgs;
   opts <- compilerOpts argv;
-  collectArgs opts;
-  return ();
+  s <- collectArgs opts;
+  putStrLn $ show s;
+  execute s;
   }

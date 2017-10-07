@@ -60,10 +60,15 @@ collectArgs (flags, positional) = do {
    otherwise -> ioError $ userError "Too many input files"
   }
 
+-- convert frame/s to ms/frame
+frameRate :: Float -> Int
+frameRate f = round ((1.0 / f) * 1000)
+
+
 execute :: InputArgs -> IO ()
 execute s = do {
   input <- readFile $ input s;
-  case runParser (SubP.parseFile 1) () "" input of
+  case runParser (SubP.parseFile (frameRate $ fps s)) () "" input of
    Left err -> ioError $ userError "Parsing error"
    Right tsubs ->
      writeFile (output s) (SrtW.subContainerToStr tsubs);
